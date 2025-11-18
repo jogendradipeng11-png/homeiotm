@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Home Control</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .auth-container, .app-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .auth-container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .form-container {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .switch-form {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .switch-form a {
+            color: #667eea;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+            display: none;
+        }
+
+        .success-message {
+            background: #d1edff;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+            display: none;
+        }
+
+        /* App Styles */
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 30px;
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logout-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .controls {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 1.5em;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+        }
+
+        .device-management {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .bulbs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .bulb-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid #e9ecef;
+        }
+
+        .bulb-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .bulb-card.active {
+            background: linear-gradient(135deg, #ffd89b, #19547b);
+            color: white;
+            border-color: #ffd89b;
+        }
+
+        .bulb-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .fan-control {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .speed-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .speed-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            background: #e9ecef;
+            color: #495057;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .speed-btn.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .speed-btn:hover:not(.active) {
+            background: #dee2e6;
+        }
+
+        .status {
+            text-align: center;
+            padding: 20px;
+            background: #ecf0f1;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        .device-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .online-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #2ecc71;
+        }
+
+        .online-indicator.offline {
+            background: #e74c3c;
+        }
+
+        @media (max-width: 768px) {
+            .bulbs-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .app-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Authentication Container -->
+    <div class="container">
+        <div class="auth-container" id="auth-container">
+            <!-- Login Form -->
+            <div class="header">
+                <h1>🔐 Smart Home Login</h1>
+                <p>Welcome back!</p>
+            </div>
+            <div class="form-container" id="login-form">
+                <div class="error-message" id="login-error"></div>
+                <div class="success-message" id="login-success"></div>
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" placeholder="Enter your password">
+                </div>
+                <button class="btn" onclick="login()">Login</button>
+                <div class="switch-form">
+                    <p>Don't have an account? <a onclick="showSignup()">Sign up</a></p>
+                </div>
+            </div>
+
+            <!-- Signup Form -->
+            <div class="form-container" id="signup-form" style="display: none;">
+                <div class="error-message" id="signup-error"></div>
+                <div class="success-message" id="signup-success"></div>
+                <div class="form-group">
+                    <label for="signup-name">Full Name</label>
+                    <input type="text" id="signup-name" placeholder="Enter your full name">
+                </div>
+                <div class="form-group">
+                    <label for="signup-email">Email</label>
+                    <input type="email" id="signup-email" placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label for="signup-password">Password</label>
+                    <input type="password" id="signup-password" placeholder="Create a password">
+                </div>
+                <div class="form-group">
+                    <label for="signup-confirm-password">Confirm Password</label>
+                    <input type="password" id="signup-confirm-password" placeholder="Confirm your password">
+                </div>
+                <button class="btn" onclick="signup()">Create Account</button>
+                <div class="switch-form">
+                    <p>Already have an account? <a onclick="showLogin()">Login</a></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Application Container -->
+        <div class="app-container" id="app-container" style="display: none;">
+            <div class="app-header">
+                <div>
+                    <h1>🏠 Smart Home Control</h1>
+                    <p>Welcome, <span id="user-name">User</span></p>
+                </div>
+                <div class="user-info">
+                    <div class="device-status">
+                        <span>Device Status:</span>
+                        <div class="online-indicator" id="device-status"></div>
+                    </div>
+                    <button class="logout-btn" onclick="logout()">Logout</button>
+                </div>
+            </div>
+
+            <div class="controls">
+                <!-- Device Management -->
+                <div class="section">
+                    <h2 class="section-title">⚙️ Device Configuration</h2>
+                    <div class="device-management">
+                        <div class="form-group">
+                            <label for="room-id">Room ID</label>
+                            <input type="text" id="room-id" placeholder="Enter room ID (e.g., room1)">
+                        </div>
+                        <div class="form-group">
+                            <label for="device-id">Device ID</label>
+                            <input type="text" id="device-id" placeholder="Enter device ID (e.g., device123)">
+                        </div>
+                        <button class="btn" onclick="connectToDevice()">Connect to Device</button>
+                    </div>
+                </div>
+
+                <!-- Bulb Controls -->
+                <div class="section">
+                    <h2 class="section-title">💡 Bulb Controls</h2>
+                    <div class="bulbs-grid">
+                        <div class="bulb-card" onclick="toggleBulb(1)">
+                            <div class="bulb-icon">💡</div>
+                            <h3>Bulb 1</h3>
+                            <div class="status" id="bulb1-status">OFF</div>
+                        </div>
+                        <div class="bulb-card" onclick="toggleBulb(2)">
+                            <div class="bulb-icon">💡</div>
+                            <h3>Bulb 2</h3>
+                            <div class="status" id="bulb2-status">OFF</div>
+                        </div>
+                        <div class="bulb-card" onclick="toggleBulb(3)">
+                            <div class="bulb-icon">💡</div>
+                            <h3>Bulb 3</h3>
+                            <div class="status" id="bulb3-status">OFF</div>
+                        </div>
+                        <div class="bulb-card" onclick="toggleBulb(4)">
+                            <div class="bulb-icon">💡</div>
+                            <h3>Bulb 4</h3>
+                            <div class="status" id="bulb4-status">OFF</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fan Control -->
+                <div class="section">
+                    <h2 class="section-title">🌀 Fan Control</h2>
+                    <div class="fan-control">
+                        <h3>Fan Speed</h3>
+                        <div class="speed-buttons">
+                            <button class="speed-btn" onclick="setFanSpeed(0)">OFF</button>
+                            <button class="speed-btn" onclick="setFanSpeed(1)">LOW</button>
+                            <button class="speed-btn" onclick="setFanSpeed(2)">MEDIUM</button>
+                            <button class="speed-btn" onclick="setFanSpeed(3)">HIGH</button>
+                        </div>
+                        <div class="status" id="fan-status">Current: OFF</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration
+       const firebaseConfig = {
+  apiKey: "AIzaSyCkCIqC8NxuurN01m7gP7QPlRaTzZWWq0Y",
+  authDomain: "homeiotm.firebaseapp.com",
+  databaseURL: "https://homeiotm-default-rtdb.firebaseio.com",
+  projectId: "homeiotm",
+  storageBucket: "homeiotm.firebasestorage.app",
+  messagingSenderId: "706795029236",
+  appId: "1:706795029236:web:7a5d299ce063515b3394a1",
+  measurementId: "G-BRPP0VTM3D"
+};
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        // Global variables
+        let currentUser = null;
+        let currentRoomId = null;
+        let currentDeviceId = null;
+
+        // Auth state listener
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                showApp();
+                loadUserData();
+            } else {
+                currentUser = null;
+                showAuth();
+            }
+        });
+
+        function showMessage(elementId, message, isError = true) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.style.display = 'block';
+            element.style.background = isError ? '#f8d7da' : '#d1edff';
+            element.style.color = isError ? '#721c24' : '#155724';
+            
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 5000);
+        }
+
+        function showLogin() {
+            document.getElementById('login-form').style.display = 'block';
+            document.getElementById('signup-form').style.display = 'none';
+        }
+
+        function showSignup() {
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('signup-form').style.display = 'block';
+        }
+
+        function showAuth() {
+            document.getElementById('auth-container').style.display = 'block';
+            document.getElementById('app-container').style.display = 'none';
+        }
+
+        function showApp() {
+            document.getElementById('auth-container').style.display = 'none';
+            document.getElementById('app-container').style.display = 'block';
+        }
+
+        async function signup() {
+            const name = document.getElementById('signup-name').value;
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const confirmPassword = document.getElementById('signup-confirm-password').value;
+
+            if (password !== confirmPassword) {
+                showMessage('signup-error', 'Passwords do not match!');
+                return;
+            }
+
+            try {
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                await database.ref('users/' + userCredential.user.uid).set({
+                    name: name,
+                    email: email,
+                    createdAt: Date.now()
+                });
+                showMessage('signup-success', 'Account created successfully!', false);
+            } catch (error) {
+                showMessage('signup-error', error.message);
+            }
+        }
+
+        async function login() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                showMessage('login-success', 'Login successful!', false);
+            } catch (error) {
+                showMessage('login-error', error.message);
+            }
+        }
+
+        function logout() {
+            auth.signOut();
+        }
+
+        function loadUserData() {
+            document.getElementById('user-name').textContent = currentUser.displayName || currentUser.email;
+        }
+
+        function connectToDevice() {
+            currentRoomId = document.getElementById('room-id').value;
+            currentDeviceId = document.getElementById('device-id').value;
+
+            if (!currentRoomId || !currentDeviceId) {
+                alert('Please enter both Room ID and Device ID');
+                return;
+            }
+
+            // Start listening to device
+            listenToDevice();
+            
+            // Save user preferences
+            database.ref('users/' + currentUser.uid + '/preferences').set({
+                roomId: currentRoomId,
+                deviceId: currentDeviceId
+            });
+        }
+
+        function listenToDevice() {
+            if (!currentRoomId || !currentDeviceId) return;
+
+            const devicePath = 'rooms/' + currentRoomId + '/devices/' + currentDeviceId;
+            
+            // Listen for device updates
+            database.ref(devicePath).on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    // Update device status
+                    const statusElement = document.getElementById('device-status');
+                    if (data.online) {
+                        statusElement.classList.remove('offline');
+                    } else {
+                        statusElement.classList.add('offline');
+                    }
+
+                    // Update controls if device is active
+                    if (data.active) {
+                        updateBulbStatus(1, data.states?.bulb1);
+                        updateBulbStatus(2, data.states?.bulb2);
+                        updateBulbStatus(3, data.states?.bulb3);
+                        updateBulbStatus(4, data.states?.bulb4);
+                        updateFanStatus(data.states?.fanSpeed);
+                    }
+                }
+            });
+        }
+
+        function updateBulbStatus(bulbNumber, state) {
+            const statusElement = document.getElementById(`bulb${bulbNumber}-status`);
+            const cardElement = statusElement.parentElement;
+            
+            if (state) {
+                statusElement.textContent = "ON";
+                cardElement.classList.add('active');
+            } else {
+                statusElement.textContent = "OFF";
+                cardElement.classList.remove('active');
+            }
+        }
+
+        function updateFanStatus(speed) {
+            const statusElement = document.getElementById('fan-status');
+            const buttons = document.querySelectorAll('.speed-btn');
+            
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            if (speed > 0) {
+                buttons[speed].classList.add('active');
+            } else {
+                buttons[0].classList.add('active');
+            }
+            
+            const speedText = ['OFF', 'LOW', 'MEDIUM', 'HIGH'][speed];
+            statusElement.textContent = `Current: ${speedText}`;
+        }
+
+        function toggleBulb(bulbNumber) {
+            if (!currentRoomId || !currentDeviceId) {
+                alert('Please connect to a device first');
+                return;
+            }
+
+            const currentState = document.getElementById(`bulb${bulbNumber}-status`).textContent === "ON";
+            const path = `rooms/${currentRoomId}/devices/${currentDeviceId}/states/bulb${bulbNumber}`;
+            database.ref(path).set(!currentState);
+        }
+
+        function setFanSpeed(speed) {
+            if (!currentRoomId || !currentDeviceId) {
+                alert('Please connect to a device first');
+                return;
+            }
+
+            const path = `rooms/${currentRoomId}/devices/${currentDeviceId}/states/fanSpeed`;
+            database.ref(path).set(speed);
+        }
+
+        // Load user preferences on app start
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                database.ref('users/' + user.uid + '/preferences').once('value').then((snapshot) => {
+                    const prefs = snapshot.val();
+                    if (prefs) {
+                        document.getElementById('room-id').value = prefs.roomId || '';
+                        document.getElementById('device-id').value = prefs.deviceId || '';
+                        if (prefs.roomId && prefs.deviceId) {
+                            currentRoomId = prefs.roomId;
+                            currentDeviceId = prefs.deviceId;
+                            listenToDevice();
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
